@@ -1,21 +1,15 @@
 <template>
   <div id="app">
-    <!-- 
-      Esta tag especial é o espaço reservado do Vue Router.
-      Ele irá renderizar o componente da página atual (Login.vue, Dashboard.vue, etc.)
-      exatamente aqui.
-    -->
+
     <router-view />
   </div>
 </template>
 
 <style>
-/* Estes são estilos globais que se aplicarão a toda a sua aplicação.
-  É um bom lugar para definir a fonte padrão, cor de fundo, etc.
-*/
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f4f7f6;
+  background-color: #1c1c1c;
   margin: 0;
   padding: 0;
   display: flex;
