@@ -7,7 +7,12 @@
         <input type="text" v-model="newTask.description" placeholder="Descrição">
       </div>
       <div class="form-row">
-        <input type="date" v-model="newTask.due_date">
+
+        <input 
+          type="date" 
+          v-model="newTask.due_date" 
+          :min="today"
+        >
         <input type="number" v-model="newTask.user_id" placeholder="ID do Utilizador" required data-cy="add-task-user-id-input">
         <button type="submit" data-cy="add-task-submit-button">Adicionar</button>
       </div>
@@ -16,7 +21,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import apiClient from '../services/api';
 
 const emit = defineEmits(['task-added']);
@@ -28,13 +33,28 @@ const newTask = ref({
   user_id: ''
 });
 
+const today = computed(() => {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = ('0' + (date.getMonth() + 1)).slice(-2); 
+  const day = ('0' + date.getDate()).slice(-2);
+  return `${year}-${month}-${day}`;
+});
+
+
 const handleCreateTask = async () => {
   try {
     const response = await apiClient.post('/tasks', newTask.value);
     emit('task-added', response.data);
     newTask.value = { title: '', description: '', due_date: '', user_id: '' };
   } catch (err) {
-    alert('Erro ao criar a tarefa. Verifique se você é um admin e os dados estão corretos.');
+
+    if (err.response && err.response.data.errors) {
+      const errorMessages = Object.values(err.response.data.errors).flat().join('\n');
+      alert(errorMessages);
+    } else {
+      alert('Erro ao criar a tarefa. Verifique se você é um admin e os dados estão corretos.');
+    }
     console.error(err);
   }
 };
