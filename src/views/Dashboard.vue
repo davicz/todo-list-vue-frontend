@@ -1,15 +1,19 @@
 <template>
   <div class="dashboard-container">
+    <!-- Componente de Notificação -->
+    <div v-if="notification.message" :class="['notification', notification.type]">
+      {{ notification.message }}
+    </div>
+
     <header class="dashboard-header">
       <h1>Minha Lista de Tarefas</h1>
       <div class="user-info">
-        <span class="welcome-text">Olá, {{ user?.name || 'Usuário' }}!</span>
+        <span class="welcome-text" data-cy="welcome-message">Olá, {{ user?.name || 'Utilizador' }}!</span>
         <button @click="handleLogout" class="logout-button">Logout</button>
       </div>
     </header>
 
     <main class="tasks-section">
-      <!-- 1. Usando o componente de formulário (só aparece para admins) -->
       <AddTaskForm v-if="isAdmin" @task-added="handleTaskAdded" />
       
       <div class="tasks-list-container">
@@ -17,10 +21,9 @@
           <h2>Minhas Tarefas</h2>
         </div>
         
-        <div v-if="loading" class="loading-message">Carregando tarefas...</div>
+        <div v-if="loading" class="loading-message">A carregar tarefas...</div>
         <div v-if="error" class="error-message">{{ error }}</div>
         
-        <!-- 2. Usando o componente da lista de tarefas -->
         <TaskList 
           v-if="!loading && tasks.length > 0"
           :tasks="tasks"
@@ -42,7 +45,6 @@ import { useRouter } from 'vue-router';
 import apiClient from '../services/api';
 import { store } from '../store';
 
-// Importando os novos componentes filhos
 import AddTaskForm from '../components/AddTaskForm.vue';
 import TaskList from '../components/TaskList.vue';
 
@@ -54,7 +56,15 @@ const tasks = ref([]);
 const loading = ref(true);
 const error = ref(null);
 
-// A lógica principal de dados permanece aqui no componente "pai"
+const notification = ref({ message: null, type: 'success' });
+
+const showNotification = (message, type = 'success') => {
+  notification.value = { message, type };
+  setTimeout(() => {
+    notification.value.message = null;
+  }, 3000);
+};
+
 const fetchTasks = async () => {
   try {
     loading.value = true;
@@ -70,9 +80,9 @@ const fetchTasks = async () => {
 
 onMounted(fetchTasks);
 
-// Métodos que lidam com os eventos emitidos pelos componentes filhos
 const handleTaskAdded = (newTask) => {
   tasks.value.push(newTask);
+  showNotification('Tarefa adicionada com sucesso!', 'success');
 };
 
 const handleToggleComplete = async (task) => {
@@ -81,7 +91,7 @@ const handleToggleComplete = async (task) => {
     const index = tasks.value.findIndex(t => t.id === task.id);
     if (index !== -1) tasks.value[index] = response.data;
   } catch (err) {
-    alert('Erro ao atualizar a tarefa.');
+    showNotification('Erro ao atualizar a tarefa.', 'error');
   }
 };
 
@@ -90,14 +100,21 @@ const handleDeleteTask = async (taskId) => {
   try {
     await apiClient.delete(`/tasks/${taskId}`);
     tasks.value = tasks.value.filter(t => t.id !== taskId);
+    showNotification('Tarefa excluída com sucesso.', 'success');
   } catch (err) {
-    alert('Erro ao excluir a tarefa.');
+    showNotification('Erro ao excluir a tarefa.', 'error');
   }
 };
 
-const handleLogout = () => {
-  store.clearAuth();
-  router.push('/login');
+const handleLogout = async () => {
+    try {
+        await apiClient.post('/logout');
+    } catch (error) {
+        console.error('Logout falhou no servidor, a limpar o lado do cliente de qualquer maneira.', error);
+    } finally {
+        store.clearAuth();
+        router.push('/login');
+    }
 };
 </script>
 
@@ -114,4 +131,23 @@ const handleLogout = () => {
 .tasks-list-header { padding: 1.5rem; border-bottom: 1px solid #eee; }
 .tasks-list-header h2 { margin: 0; font-size: 1.25rem; color: #333; }
 .loading-message, .error-message, .no-tasks-message { padding: 3rem 2rem; text-align: center; color: #6c757d; font-size: 1.1rem; }
+
+/* Estilos para a Notificação */
+.notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: bold;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+}
+.notification.success {
+  background-color: #28a745;
+}
+.notification.error {
+  background-color: #dc3545;
+}
 </style>

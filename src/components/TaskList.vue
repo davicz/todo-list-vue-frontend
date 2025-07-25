@@ -4,8 +4,8 @@
       v-for="task in tasks" 
       :key="task.id" 
       :task="task"
-      @toggle-complete="$emit('toggle-complete', $event)"
-      @delete-task="$emit('delete-task', $event)"
+      :onToggleComplete="onToggleComplete"
+      :onDeleteTask="onDeleteTask"
     />
   </ul>
 </template>
@@ -13,16 +13,11 @@
 <script setup>
 import TaskItem from './TaskItem.vue';
 
-// Recebe a lista de tarefas como propriedade
 defineProps({
-  tasks: {
-    type: Array,
-    required: true
-  }
+  tasks: { type: Array, required: true },
+  onToggleComplete: { type: Function, required: true },
+  onDeleteTask: { type: Function, required: true }
 });
-
-// "Repassa" os eventos do TaskItem para o Dashboard
-defineEmits(['toggle-complete', 'delete-task']);
 </script>
 
 <style scoped>

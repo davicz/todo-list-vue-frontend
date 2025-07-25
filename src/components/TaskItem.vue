@@ -1,11 +1,12 @@
 <template>
-  <li class="task-item" :class="{ 'task-completed': task.completed }">
+  <li class="task-item" :class="{ 'task-completed': task.completed }" data-cy="task-item">
     <div class="task-status">
       <input 
         type="checkbox" 
         :checked="task.completed"
-        @change="$emit('toggle-complete', task)"
+        @change="handleToggle"
         class="task-checkbox"
+        data-cy="task-checkbox"
       />
     </div>
     <div class="task-details">
@@ -14,7 +15,7 @@
       <small>Data de Vencimento: {{ task.due_date || 'N/A' }}</small>
     </div>
     <div class="task-actions">
-      <button @click="$emit('delete-task', task.id)" class="delete-button">
+      <button @click="handleDelete" class="delete-button" data-cy="task-delete-button">
         Excluir
       </button>
     </div>
@@ -22,35 +23,25 @@
 </template>
 
 <script setup>
-// Este componente recebe uma 'task' como propriedade (prop)
-defineProps({
-  task: {
-    type: Object,
-    required: true
-  }
+const props = defineProps({
+  task: { type: Object, required: true },
+  onToggleComplete: { type: Function, required: true },
+  onDeleteTask: { type: Function, required: true }
 });
 
-// Este componente emite eventos para o componente pai quando algo acontece
-defineEmits(['toggle-complete', 'delete-task']);
+const handleToggle = () => {
+  props.onToggleComplete(props.task);
+};
+
+const handleDelete = () => {
+  props.onDeleteTask(props.task.id);
+};
 </script>
 
 <style scoped>
-.task-item {
-  padding: 1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  transition: all 0.3s ease;
-  background-color: #fff;
-  margin: 1rem;
-  border-radius: 8px;
-  border-left: 5px solid #ab47bc;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06);
-}
-.task-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
+/* Os seus estilos permanecem os mesmos */
+.task-item { padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem; transition: all 0.3s ease; background-color: #fff; margin: 1rem; border-radius: 8px; border-left: 5px solid #ab47bc; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.06); }
+.task-item:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1); }
 .task-details { flex-grow: 1; }
 .task-details h3 { margin: 0 0 0.5rem 0; font-size: 1.2rem; color: #5e35b1; }
 .task-details p { margin: 0 0 0.5rem 0; color: #555; }

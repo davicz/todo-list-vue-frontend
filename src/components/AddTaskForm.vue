@@ -3,13 +3,13 @@
     <h3>Adicionar Nova Tarefa</h3>
     <form @submit.prevent="handleCreateTask" class="add-task-form">
       <div class="form-row">
-        <input type="text" v-model="newTask.title" placeholder="Título da tarefa" required>
+        <input type="text" v-model="newTask.title" placeholder="Título da tarefa" required data-cy="add-task-title-input">
         <input type="text" v-model="newTask.description" placeholder="Descrição">
       </div>
       <div class="form-row">
         <input type="date" v-model="newTask.due_date">
-        <input type="number" v-model="newTask.user_id" placeholder="ID do Usuário" required>
-        <button type="submit">Adicionar</button>
+        <input type="number" v-model="newTask.user_id" placeholder="ID do Utilizador" required data-cy="add-task-user-id-input">
+        <button type="submit" data-cy="add-task-submit-button">Adicionar</button>
       </div>
     </form>
   </div>
@@ -31,9 +31,7 @@ const newTask = ref({
 const handleCreateTask = async () => {
   try {
     const response = await apiClient.post('/tasks', newTask.value);
-    // Emite um evento para o Dashboard com a nova tarefa
     emit('task-added', response.data);
-    // Limpa o formulário
     newTask.value = { title: '', description: '', due_date: '', user_id: '' };
   } catch (err) {
     alert('Erro ao criar a tarefa. Verifique se você é um admin e os dados estão corretos.');
