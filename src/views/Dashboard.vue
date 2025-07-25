@@ -18,13 +18,16 @@
       <div class="tasks-list-container">
         <div class="tasks-list-header">
           <h2>Minhas Tarefas</h2>
-          <!-- NOVO: Campo de busca -->
-          <input 
-            type="text" 
-            v-model="searchTerm"
-            placeholder="Pesquisar tarefas..."
-            class="search-input"
-          />
+
+          <div class="header-actions">
+            <input 
+              type="text" 
+              v-model="searchTerm"
+              placeholder="Pesquisar tarefas..."
+              class="search-input"
+            />
+            <button @click="handleExport" class="export-button">Exportar CSV</button>
+          </div>
         </div>
         
         <div v-if="loading" class="loading-message">A carregar tarefas...</div>
@@ -47,7 +50,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue'; // Importar 'watch'
+import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import apiClient from '../services/api';
 import { store } from '../store';
@@ -63,8 +66,6 @@ const tasks = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const notification = ref({ message: null, type: 'success' });
-
-// NOVO: Estado para o termo de busca e debounce
 const searchTerm = ref('');
 let debounceTimer = null;
 
@@ -75,13 +76,12 @@ const showNotification = (message, type = 'success') => {
   }, 3000);
 };
 
-// fetchTasks agora aceita o termo de busca
 const fetchTasks = async (search = '') => {
   try {
     loading.value = true;
     error.value = null;
     const response = await apiClient.get('/tasks', {
-      params: { search } // Envia o termo de busca como parâmetro na URL
+      params: { search }
     });
     tasks.value = response.data;
   } catch (err) {
@@ -93,19 +93,38 @@ const fetchTasks = async (search = '') => {
 
 onMounted(() => fetchTasks());
 
-// NOVO: Observador (Watcher) para o termo de busca
-// Este código é executado toda vez que o valor de 'searchTerm' muda.
 watch(searchTerm, (newSearchTerm) => {
-  // Cancela a busca anterior se o utilizador continuar a digitar
   clearTimeout(debounceTimer);
-  // Espera 500ms após o utilizador parar de digitar para fazer a busca
   debounceTimer = setTimeout(() => {
     fetchTasks(newSearchTerm);
   }, 500);
 });
 
+// NOVO: Função para lidar com a exportação
+const handleExport = async () => {
+  try {
+    const response = await apiClient.get('/tasks/export', {
+      responseType: 'blob', 
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'tarefas.csv'); 
+    document.body.appendChild(link);
+    link.click(); 
+
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    showNotification('Exportação iniciada com sucesso!', 'success');
+  } catch (error) {
+    showNotification('Erro ao exportar as tarefas.', 'error');
+    console.error('Export failed:', error);
+  }
+};
+
 const handleTaskAdded = (newTask) => {
-  fetchTasks(searchTerm.value); // Recarrega a lista para incluir a nova tarefa
+  fetchTasks(searchTerm.value);
   showNotification('Tarefa adicionada com sucesso!', 'success');
 };
 
@@ -143,7 +162,7 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* Adicionando estilos para o campo de busca */
+
 .tasks-list-header {
   display: flex;
   justify-content: space-between;
@@ -151,17 +170,29 @@ const handleLogout = async () => {
   padding: 1.5rem;
   border-bottom: 1px solid #eee;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
 .search-input {
   padding: 0.5rem 0.75rem;
   border: 1px solid #ccc;
   border-radius: 6px;
   width: 250px;
-  transition: all 0.3s ease;
 }
-.search-input:focus {
-  border-color: #7e57c2;
-  box-shadow: 0 0 0 3px rgba(126, 87, 194, 0.2);
-  outline: none;
+.export-button {
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 6px;
+  background-color: #1d8a5f;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.export-button:hover {
+  background-color: #176d4a;
 }
 .dashboard-container { width: 100%; max-width: 960px; margin: 0 auto; padding: 1rem; }
 .dashboard-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.5rem; border-bottom: 1px solid #d1c4e9; margin-bottom: 2rem; }
