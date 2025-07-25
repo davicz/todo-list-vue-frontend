@@ -1,6 +1,5 @@
 <template>
   <div class="dashboard-container">
-    <!-- Componente de Notificação -->
     <div v-if="notification.message" :class="['notification', notification.type]">
       {{ notification.message }}
     </div>
@@ -19,6 +18,13 @@
       <div class="tasks-list-container">
         <div class="tasks-list-header">
           <h2>Minhas Tarefas</h2>
+          <!-- NOVO: Campo de busca -->
+          <input 
+            type="text" 
+            v-model="searchTerm"
+            placeholder="Pesquisar tarefas..."
+            class="search-input"
+          />
         </div>
         
         <div v-if="loading" class="loading-message">A carregar tarefas...</div>
@@ -27,12 +33,13 @@
         <TaskList 
           v-if="!loading && tasks.length > 0"
           :tasks="tasks"
-          @toggle-complete="handleToggleComplete"
-          @delete-task="handleDeleteTask"
+          :onToggleComplete="handleToggleComplete"
+          :onDeleteTask="handleDeleteTask"
         />
 
         <div v-if="!loading && tasks.length === 0" class="no-tasks-message">
-          Você ainda não tem tarefas.
+          <span v-if="searchTerm">Nenhuma tarefa encontrada para "{{ searchTerm }}".</span>
+          <span v-else>Você ainda não tem tarefas.</span>
         </div>
       </div>
     </main>
@@ -40,7 +47,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue'; // Importar 'watch'
 import { useRouter } from 'vue-router';
 import apiClient from '../services/api';
 import { store } from '../store';
@@ -55,8 +62,11 @@ const isAdmin = computed(() => user.value?.roles?.some(role => role.name === 'ad
 const tasks = ref([]);
 const loading = ref(true);
 const error = ref(null);
-
 const notification = ref({ message: null, type: 'success' });
+
+// NOVO: Estado para o termo de busca e debounce
+const searchTerm = ref('');
+let debounceTimer = null;
 
 const showNotification = (message, type = 'success') => {
   notification.value = { message, type };
@@ -65,11 +75,14 @@ const showNotification = (message, type = 'success') => {
   }, 3000);
 };
 
-const fetchTasks = async () => {
+// fetchTasks agora aceita o termo de busca
+const fetchTasks = async (search = '') => {
   try {
     loading.value = true;
     error.value = null;
-    const response = await apiClient.get('/tasks');
+    const response = await apiClient.get('/tasks', {
+      params: { search } // Envia o termo de busca como parâmetro na URL
+    });
     tasks.value = response.data;
   } catch (err) {
     error.value = 'Não foi possível carregar as tarefas.';
@@ -78,10 +91,21 @@ const fetchTasks = async () => {
   }
 };
 
-onMounted(fetchTasks);
+onMounted(() => fetchTasks());
+
+// NOVO: Observador (Watcher) para o termo de busca
+// Este código é executado toda vez que o valor de 'searchTerm' muda.
+watch(searchTerm, (newSearchTerm) => {
+  // Cancela a busca anterior se o utilizador continuar a digitar
+  clearTimeout(debounceTimer);
+  // Espera 500ms após o utilizador parar de digitar para fazer a busca
+  debounceTimer = setTimeout(() => {
+    fetchTasks(newSearchTerm);
+  }, 500);
+});
 
 const handleTaskAdded = (newTask) => {
-  tasks.value.push(newTask);
+  fetchTasks(searchTerm.value); // Recarrega a lista para incluir a nova tarefa
   showNotification('Tarefa adicionada com sucesso!', 'success');
 };
 
@@ -119,7 +143,26 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-/* Os estilos do Dashboard agora são mais simples, focados apenas no layout geral */
+/* Adicionando estilos para o campo de busca */
+.tasks-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+}
+.search-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  width: 250px;
+  transition: all 0.3s ease;
+}
+.search-input:focus {
+  border-color: #7e57c2;
+  box-shadow: 0 0 0 3px rgba(126, 87, 194, 0.2);
+  outline: none;
+}
 .dashboard-container { width: 100%; max-width: 960px; margin: 0 auto; padding: 1rem; }
 .dashboard-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.5rem; border-bottom: 1px solid #d1c4e9; margin-bottom: 2rem; }
 .dashboard-header h1 { font-size: 2rem; color: #4a148c; }
@@ -128,26 +171,9 @@ const handleLogout = async () => {
 .logout-button { padding: 0.6rem 1.2rem; border: none; border-radius: 6px; background-color: #7e57c2; color: white; font-weight: bold; cursor: pointer; transition: background-color 0.3s ease; }
 .logout-button:hover { background-color: #5e35b1; }
 .tasks-list-container { background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08); }
-.tasks-list-header { padding: 1.5rem; border-bottom: 1px solid #eee; }
 .tasks-list-header h2 { margin: 0; font-size: 1.25rem; color: #333; }
 .loading-message, .error-message, .no-tasks-message { padding: 3rem 2rem; text-align: center; color: #6c757d; font-size: 1.1rem; }
-
-/* Estilos para a Notificação */
-.notification {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  padding: 1rem 1.5rem;
-  border-radius: 8px;
-  color: #fff;
-  font-weight: bold;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  z-index: 1000;
-}
-.notification.success {
-  background-color: #28a745;
-}
-.notification.error {
-  background-color: #dc3545;
-}
+.notification { position: fixed; top: 20px; right: 20px; padding: 1rem 1.5rem; border-radius: 8px; color: #fff; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; }
+.notification.success { background-color: #28a745; }
+.notification.error { background-color: #dc3545; }
 </style>
