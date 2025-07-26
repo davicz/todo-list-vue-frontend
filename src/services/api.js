@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { store } from '../store';
+// Já não precisamos de importar o store aqui
 
 const apiClient = axios.create({
   baseURL: 'http://localhost:8000/api',
@@ -9,9 +9,14 @@ const apiClient = axios.create({
   }
 });
 
+// Intercetor de requisições
 apiClient.interceptors.request.use(config => {
-  if (store.token) {
-    config.headers.Authorization = `Bearer ${store.token}`;
+  // Lemos o token diretamente do localStorage em cada requisição.
+  // Isto é mais fiável e evita problemas de timing.
+  const token = localStorage.getItem('token');
+  
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 }, error => {
