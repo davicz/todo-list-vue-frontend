@@ -7,6 +7,8 @@
     <header class="dashboard-header">
       <h1>Minha Lista de Tarefas</h1>
       <div class="user-info">
+        <!-- NOVO: Link para o Painel de Admin -->
+        <router-link v-if="isAdmin" to="/admin" class="admin-button">Painel Admin</router-link>
         <span class="welcome-text" data-cy="welcome-message">Olá, {{ user?.name || 'Utilizador' }}!</span>
         <button @click="handleLogout" class="logout-button">Logout</button>
       </div>
@@ -18,16 +20,12 @@
       <div class="tasks-list-container">
         <div class="tasks-list-header">
           <h2>Minhas Tarefas</h2>
-
-          <div class="header-actions">
-            <input 
-              type="text" 
-              v-model="searchTerm"
-              placeholder="Pesquisar tarefas..."
-              class="search-input"
-            />
-            <button @click="handleExport" class="export-button">Exportar CSV</button>
-          </div>
+          <input 
+            type="text" 
+            v-model="searchTerm"
+            placeholder="Pesquisar tarefas..."
+            class="search-input"
+          />
         </div>
         
         <div v-if="loading" class="loading-message">A carregar tarefas...</div>
@@ -59,8 +57,16 @@ import AddTaskForm from '../components/AddTaskForm.vue';
 import TaskList from '../components/TaskList.vue';
 
 const router = useRouter();
+
+// --- MUDANÇA IMPORTANTE AQUI ---
+// Em vez de pegar o 'user' uma vez, criamos uma propriedade computada.
+// Isto garante que qualquer alteração no 'store.user' será refletida aqui instantaneamente.
 const user = computed(() => store.user);
-const isAdmin = computed(() => user.value?.roles?.some(role => role.name === 'admin'));
+const isAdmin = computed(() => {
+  // A verificação agora é feita dentro da propriedade computada, tornando-a reativa.
+  return user.value?.roles?.some(role => role.name === 'admin');
+});
+
 
 const tasks = ref([]);
 const loading = ref(true);
@@ -99,29 +105,6 @@ watch(searchTerm, (newSearchTerm) => {
     fetchTasks(newSearchTerm);
   }, 500);
 });
-
-// NOVO: Função para lidar com a exportação
-const handleExport = async () => {
-  try {
-    const response = await apiClient.get('/tasks/export', {
-      responseType: 'blob', 
-    });
-
-    const url = window.URL.createObjectURL(new Blob([response.data]));
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'tarefas.csv'); 
-    document.body.appendChild(link);
-    link.click(); 
-
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    showNotification('Exportação iniciada com sucesso!', 'success');
-  } catch (error) {
-    showNotification('Erro ao exportar as tarefas.', 'error');
-    console.error('Export failed:', error);
-  }
-};
 
 const handleTaskAdded = (newTask) => {
   fetchTasks(searchTerm.value);
@@ -162,38 +145,23 @@ const handleLogout = async () => {
 </script>
 
 <style scoped>
-
-.tasks-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #eee;
-}
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-.search-input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
+/* Adicionando estilos para o botão de admin */
+.admin-button {
+  padding: 0.6rem 1.2rem;
   border-radius: 6px;
-  width: 250px;
-}
-.export-button {
-  padding: 0.6rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background-color: #1d8a5f;
+  background-color: #f39c12;
   color: white;
   font-weight: bold;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  text-decoration: none;
+  transition: background-color 0.3s ease;
+  margin-right: 1rem; /* Adiciona espaço entre os botões */
 }
-.export-button:hover {
-  background-color: #176d4a;
+.admin-button:hover {
+  background-color: #e67e22;
 }
+.tasks-list-header { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem; border-bottom: 1px solid #eee; }
+.search-input { padding: 0.5rem 0.75rem; border: 1px solid #ccc; border-radius: 6px; width: 250px; transition: all 0.3s ease; }
+.search-input:focus { border-color: #7e57c2; box-shadow: 0 0 0 3px rgba(126, 87, 194, 0.2); outline: none; }
 .dashboard-container { width: 100%; max-width: 960px; margin: 0 auto; padding: 1rem; }
 .dashboard-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 1.5rem; border-bottom: 1px solid #d1c4e9; margin-bottom: 2rem; }
 .dashboard-header h1 { font-size: 2rem; color: #4a148c; }
